@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from PIL import Image
 from torchvision import transforms, datasets
@@ -16,6 +16,7 @@ TEST_DIR = '..\input\gtsrb\GTSRB\Final_Test\PNG'
 # train/val -> download True -> augmentation -> convert to png -> dataloader
 
 #########################################################################################################################
+
     # image_datasets = {}
     # image_datasets['train'] = datasets.GTSRB(root=ROOT_DIR, split='train', transform=TrainTransform(), download=False)
     # image_datasets['test'] = datasets.GTSRB(root=ROOT_DIR, split='test', transform=ValidTransform(), download=False)
@@ -63,6 +64,7 @@ TEST_DIR = '..\input\gtsrb\GTSRB\Final_Test\PNG'
     #         image = Image.open(file_path)
     #         # print(save_file_path)
     #         image.save(save_file_path)
+
 #########################################################################################################################
 
 # define transform
@@ -177,39 +179,43 @@ def get_train_valid_loader(data_dir,
 
     return train_loader, valid_loader, train_data_size, valid_data_size, classes
 
-# def imshow(inp, title=None):
-#     """Imshow for Tensor."""
-#     inp = inp.numpy().transpose((1, 2, 0))
-#     mean = np.array([0.485, 0.456, 0.406])
-#     std = np.array([0.229, 0.224, 0.225])
-#     inp = std * inp + mean
-#     inp = np.clip(inp, 0, 1)
-#     plt.imshow(inp)
-#     if title is not None:
-#         plt.title(title)
-#     plt.pause(0.001)  # pause a bit so that plots are updated
+def imshow(inp, title=None):
+    """Imshow for Tensor."""
+    inp = inp.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    inp = std * inp + mean
+    inp = np.clip(inp, 0, 1)
+    plt.imshow(inp)
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-# def check():
-#     labels_frame = pd.read_csv('GTSRB/Online-Test/GT-online_test.csv', sep=";")
-#     img_name = labels_frame.iloc[10]
-#     print(img_name)
-#     print(img_name['Filename'])
-#     # print(labels_frame.iloc[10,:])
-#     image = io.imread(os.path.join('GTSRB/Online-Test/Images/',img_name['Filename']))
-#     plt.imshow(image)
-#     plt.show()
+def check():
+    labels_frame = pd.read_csv('..\input\gtsrb\GTSRB\Final_Test\PNG\GT-final_test.csv', sep=";")
+    img_name = labels_frame.iloc[10]
+    print(img_name)
+    print(img_name['Filename'])
+    # print(labels_frame.iloc[10,:])
+    image = io.imread(os.path.join('..\input\gtsrb\GTSRB\Final_Test\PNG',img_name['Filename']))
+    plt.imshow(image)
+    plt.show()
 
-#     root_dir = 'GTSRB/Online-Test/'
-#     traffic_dataset = TrafficSignDataset(csv_file=os.path.join(root_dir, 'GT-online_test.csv'), 
-#                                          root_dir=os.path.join(root_dir, 'Images/'),
-#                                          transform=test_transform)
+    # GTSRB/Online-Test/
+    root_dir = '..\input\gtsrb\GTSRB\Final_Test\PNG'
+    traffic_dataset = TrafficSignDataset(csv_file = os.path.join(root_dir, 'GT-final_test.csv'), 
+                                         root_dir = root_dir,
+                                         transform = test_transform)
 
-#     test_loader = torch.utils.data.DataLoader(traffic_dataset, batch_size=8)                           
-#     data_iter = iter(test_loader)
-#     sample = data_iter.next()
-#     images, labels = sample['image'], sample['class']
-#     # Make a grid from batch
-#     out = make_grid(images)
+    test_loader = torch.utils.data.DataLoader(traffic_dataset, batch_size=8)                           
+    data_iter = iter(test_loader)
+    sample = data_iter.next()
+    images, labels = sample['image'], sample['class']
+    # Make a grid from batch
+    out = make_grid(images)
 
-#     imshow(out, title=[x for x in labels])
+    imshow(out, title=[x for x in labels])
+
+if __name__ == '__main__':
+    check()
