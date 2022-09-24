@@ -16,6 +16,7 @@ from model import build_model
 from new_datasets import TrafficSignDataset, get_train_valid_loader
 from utils import save_model, save_plots
 
+from utils import save_plots
 from ResultWriter import ResultWriter 
 from statistics import accuracy, AverageMeter, ProgressMeter
 
@@ -31,9 +32,9 @@ def train(args, model, dataloader, loader_len, criterion, optimizer, scheduler, 
     train the model
     '''
     # save result every epoch
-    # resultWriter = ResultWriter(args.save_path, save_file_name)
-    # if epoch == 0:
-    #     resultWriter.create_csv(['epoch', 'loss', 'top-1', 'top-5', 'lr'])
+    resultWriter = ResultWriter(args.save_path, save_file_name)
+    if epoch == 0:
+        resultWriter.create_csv(['epoch', 'loss', 'top-1', 'top-5', 'lr'])
     
     # use gpu or not
     device = torch.device('cuda' if use_gpu else 'cpu')
@@ -72,8 +73,6 @@ def train(args, model, dataloader, loader_len, criterion, optimizer, scheduler, 
         loss = criterion(outputs, labels)
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs, labels, topk=(1, 5))
-        # _, preds = torch.max(outputs.data, 1)
-        # train_running_correct += (preds == labels).sum().item()
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -102,7 +101,7 @@ def train(args, model, dataloader, loader_len, criterion, optimizer, scheduler, 
         if i % args.print_freq == 0:
             progress.display(i)
         # write training result to file
-    # resultWriter.write_csv([epoch, losses.avg, top1.avg.item(), top5.avg.item(), scheduler.optimizer.param_groups[0]['lr']])
+    resultWriter.write_csv([epoch, losses.avg, top1.avg.item(), top5.avg.item(), scheduler.optimizer.param_groups[0]['lr']])
 
     print('lr:%.6f' % scheduler.optimizer.param_groups[0]['lr'])
     print('Train ***    Loss:{losses.avg:.2e}    Acc@1:{top1.avg:.2f}    Acc@5:{top5.avg:.2f}'.format(losses=losses, top1=top1, top5=top5))
@@ -111,16 +110,16 @@ def train(args, model, dataloader, loader_len, criterion, optimizer, scheduler, 
         if not os.path.exists(args.save_path):
             os.makedirs(args.save_path)
         torch.save(model.state_dict(), os.path.join(args.save_path, "epoch_" + str(epoch) + ".pth"))
-
+  
 def validate(args, model, dataloader, loader_len, criterion, use_gpu, epoch, ema=None, save_file_name='val.csv'):
     '''
     validate the model
     '''
 
     # save result every epoch
-    # resultWriter = ResultWriter(args.save_path, save_file_name)
-    # if epoch == 0:
-    #     resultWriter.create_csv(['epoch', 'loss', 'top-1', 'top-5'])
+    resultWriter = ResultWriter(args.save_path, save_file_name)
+    if epoch == 0:
+        resultWriter.create_csv(['epoch', 'loss', 'top-1', 'top-5'])
 
     device = torch.device('cuda' if use_gpu else 'cpu')
 
@@ -168,7 +167,7 @@ def validate(args, model, dataloader, loader_len, criterion, use_gpu, epoch, ema
     #     # restore the origin parameters after val
     #     ema.restore()
     # write val result to file
-    # resultWriter.write_csv([epoch, losses.avg, top1.avg.item(), top5.avg.item()])
+    resultWriter.write_csv([epoch, losses.avg, top1.avg.item(), top5.avg.item()])
 
     print(' Val  ***    Loss:{losses.avg:.2e}    Acc@1:{top1.avg:.2f}    Acc@5:{top5.avg:.2f}'.format(losses=losses, top1=top1, top5=top5))
 
@@ -236,13 +235,13 @@ if __name__ == '__main__':
     # Root catalog of images
     # parser.add_argument('--data-dir', type=str, default='/media/data2/chenjiarong/ImageData')
     parser.add_argument('--batch-size', type=int, default=256)
-    parser.add_argument('--num-epochs', type=int, default=150)
+    parser.add_argument('--num-epochs', type=int, default=25)
     parser.add_argument('--lr', type=float, default=0.1)
     parser.add_argument('--num-workers', type=int, default=4)
     #parser.add_argument('--gpus', type=str, default='0')
     parser.add_argument('--print-freq', type=int, default=1000)
     parser.add_argument('--save-epoch-freq', type=int, default=1)
-    parser.add_argument('--save-path', type=str, default='..\outputs\trained_model\MobileNetV3')
+    parser.add_argument('--save-path', type=str, default='../outputs/trained_model/MobileNetV3')
     parser.add_argument('-save', default=False, action='store_true', help='save model or not')
     parser.add_argument('--resume', type=str, default='', help='For training from one checkpoint')
     parser.add_argument('--start-epoch', type=int, default=0, help='Corresponding to the epoch of resume')
@@ -298,8 +297,8 @@ if __name__ == '__main__':
         print('torch.backends.cudnn.deterministic:' + str(args.deterministic))
     
     # Load the training and validation datasets.
-    train_data_dir = '..\input\gtsrb\GTSRB\Final_Training'
-    test_data_dir = '..\input\gtsrb\GTSRB\Final_Test\PNG'
+    train_data_dir = '../input/gtsrb/GTSRB/Final_Training'
+    test_data_dir = '../input/gtsrb/GTSRB/Final_Test/PNG'
     train_transform = transforms.Compose([
         transforms.Resize((32, 32)),
         transforms.RandomCrop(32, padding=4),
@@ -397,3 +396,4 @@ if __name__ == '__main__':
                         optimizer=optimizer_ft,
                         scheduler=lr_scheduler,
                         use_gpu=use_gpu)
+    
