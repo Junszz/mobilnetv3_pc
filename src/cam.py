@@ -4,40 +4,42 @@ import torch
 import glob as glob
 import pandas as pd
 import os
-import albumentations as A
 import time
-
-from albumentations.pytorch import ToTensorV2
+from torchvision import transforms
 from torch.nn import functional as F
 from torch import topk
+from mobilenetv3 import MobileNetV3
+# import torchvision.models as models
 
-from model import build_model
+# from model import build_model
 
 # Define computation device.
 device = 'cuda'
 # Class names.
 sign_names_df = pd.read_csv('../input/signnames.csv')
 class_names = sign_names_df.SignName.tolist()
+# print(class_names)
 
 # DataFrame for ground truth.
 gt_df = pd.read_csv(
-    '../input/GTSRB_Final_Test_GT/GT-final_test.csv', 
+    '../input/gtsrb/GTSRB/Final_Test/PNG/GT-final_test.csv', 
     delimiter=';'
 )
 gt_df = gt_df.set_index('Filename', drop=True)
+# print(gt_df)
 
 # Initialize model, switch to eval model, load trained weights.
-model = build_model(
-    pretrained=False,
-    fine_tune=False, 
-    num_classes=43
-).to(device)
+model = MobileNetV3(mode='large', classes_num=43, input_size=32, 
+                    width_multiplier=1.0, dropout=0.2, 
+                    BN_momentum=0.1, zero_gamma=False)
+# model = models.mobilenet_v3_large(pretrained = False)
+# model = build_model(
+#     pretrained=False,
+#     fine_tune=False, 
+#     num_classes=43
+# ).to(device)
 model = model.eval()
-model.load_state_dict(
-    torch.load(
-        '../outputs/model.pth', map_location=device
-    )['model_state_dict']
-)
+model.load_state_dict(torch.load('../outputs/trained_model/MobileNetV3/epoch_24.pth'))
 
 # https://github.com/zhoubolei/CAM/blob/master/pytorch_CAM.py
 def returnCAM(feature_conv, weight_softmax, class_idx):
@@ -89,29 +91,31 @@ def visualize_and_save_map(
     if save_name is not None:
         cv2.imwrite(f"../outputs/test_results/CAM_{save_name}.jpg", img_concat)
 
-# Hook the feature extractor.
-# https://github.com/zhoubolei/CAM/blob/master/pytorch_CAM.py
+# print(model._modules.get('featureList'))
+
+# Hook the feature extractor.   
 features_blobs = []
 def hook_feature(module, input, output):
     features_blobs.append(output.data.cpu().numpy())
-model._modules.get('features').register_forward_hook(hook_feature)
+model._modules.get('featureList').register_forward_hook(hook_feature)
 # Get the softmax weight.
 params = list(model.parameters())
 weight_softmax = np.squeeze(params[-4].data.cpu().numpy())
 
 # Define the transforms, resize => tensor => normalize.
-transform = A.Compose([
-    A.Resize(224, 224),
-    A.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    ),
-    ToTensorV2(),
+transform = transforms.Compose([
+    transforms.Resize((32, 32)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.3403, 0.3121, 0.3214),
+                        (0.2724, 0.2608, 0.2669))
     ])
 
 counter = 0
 # Run for all the test images.
-all_images = glob.glob('../input/GTSRB_Final_Test_Images/GTSRB/Final_Test/Images/*.ppm')
+all_images = glob.glob('../input/gtsrb/GTSRB/Final_Test/PNG/*.png')
+# all_images = glob.glob('../input/GTSRB_Final_Test_Images/GTSRB/Final_Test/Images/*.ppm')
+# print(len(all_images)) #12630
+
 correct_count = 0
 frame_count = 0 # To count total frames.
 total_fps = 0 # To get the final frames per second. 
@@ -121,6 +125,7 @@ for i, image_path in enumerate(all_images):
     orig_image = image.copy()
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     height, width, _ = orig_image.shape
+
     # Apply the image transforms.
     image_tensor = transform(image=image)['image']
     # Add batch dimension.
@@ -155,12 +160,12 @@ for i, image_path in enumerate(all_images):
     # Increment frame count.
     frame_count += 1
 
-print(f"Total number of test images: {len(all_images)}")
-print(f"Total correct predictions: {correct_count}")
-print(f"Accuracy: {correct_count/len(all_images)*100:.3f}")
+# print(f"Total number of test images: {len(all_images)}")
+# print(f"Total correct predictions: {correct_count}")
+# print(f"Accuracy: {correct_count/len(all_images)*100:.3f}")
 
-# Close all frames and video windows.
-cv2.destroyAllWindows()
-# calculate and print the average FPS
-avg_fps = total_fps / frame_count
-print(f"Average FPS: {avg_fps:.3f}")
+# # Close all frames and video windows.
+# cv2.destroyAllWindows()
+# # calculate and print the average FPS
+# avg_fps = total_fps / frame_count
+# print(f"Average FPS: {avg_fps:.3f}")
